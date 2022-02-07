@@ -1,4 +1,5 @@
 %% Phase averaging of instantaneous spatial data (for periodic signals) having well-defined phase
+%  Keep phase_averaging.m function in MATLAB path
 
 clc
 clear
@@ -39,17 +40,17 @@ Chemiimgname            = 'Img';
 
 file_num                = 1; % 1 - Uncoupled, 2 - Coupled
 file_name               = sprintf('%d.txt', file_num);
-pres_data               = load([pres_data_Folder, file_name]);
-p_near                  = pres_data(:,3)*1000/0.2134; % taking 3rd row pressure data (close to dump plane)
+pres_data               = load([pres_data_Folder, file_name]); % Loading acoustic pressure files
+p_near                  = pres_data(:,3)*1000/0.2134;          % taking 3rd row pressure data (close to dump plane)
 pf_near                 = p_near - mean(p_near);
 pnear_frms              = rms(pf_near);
 
-total_time              = 3;
+total_time              = 3;     % Time (total) in seconds 
 fs_pres                 = 10000; % Sampling frequency for pressure data 
 fs_img                  = 2000;  % Sampling frequency for high-speed imaging
 sktime                  = 1/fs_pres; 
-sktime_micros           = sktime*1000000; % 1000000 becuase camera delay time is in microseconds
-fs_pres_to_fs_img_ratio = fs_pres/fs_img; 
+sktime_micros           = sktime*1000000; % 10^6 factor becuase camera delay time is in microseconds
+fs_pres_to_fs_img_ratio = fs_pres/fs_img; % skip factor
 time_actual             = sktime:sktime:total_time; % 1st pressure data starts from 1/fspres time, not t=0 
 
 cam_delay               = delay_time_coupled(length_data_counter); % Pick delay time (coupled or uncoupled) according to the length of coupling tube used
@@ -78,10 +79,10 @@ tot_matrix_size         = row_image*col_image;
 
 %% Time series of p' and instants of camera data acquired
 
-strtpt          = 1;
+strtpt          = 1   ; % Index of image point from which the calculations will start
 no_of_image_pts = 1050;
-plim            = 7000; % Change this axis limit value for proper visualization
-qlim            = 2;    % Change this axis limit value for proper visualization
+plim            = 7000; % Change this axis limit value (for acoustic pressure fluctuations) for proper visualization
+qlim            = 2   ; % Change this axis limit value (for HRR fluctuations) for proper visualization
 figure(2)
 plot(time_skip(strtpt:strtpt + no_of_image_pts),...
     pf_near_skip(strtpt:strtpt + no_of_image_pts),'-o'...
@@ -113,16 +114,17 @@ xlim([time_skip(strtpt) time_skip(strtpt + no_of_image_pts)])
 hold on;
 linkaxes([ax1 ax2],'x')
 
-%% Find points corresponding to phases (+/- phase_margin degrees)
+%% Find points (indices) corresponding to phases (+/- phase_margin degrees)
+% Make sure that the maximum interval is +-4 (according to Manikandan's advice)
 
 phase_margin_000 = 2.5; % -2.5 degrees to 2.5 degrees
 phase_margin_045 = 3.2; % 41.8 degrees to 48.2 degrees
 phase_margin_090 = 3.5; % and so on...
-phase_margin_135 = 4;
+phase_margin_135 = 4  ;
 phase_margin_180 = 3.5;
-phase_margin_225 = 3;
+phase_margin_225 = 3  ;
 phase_margin_270 = 3.5;
-phase_margin_315 = 4;
+phase_margin_315 = 4  ;
 
 indices_considered         = strtpt:strtpt + no_of_image_pts;
 phase_considered           = phase_p_skip_wrapped(indices_considered);
@@ -154,8 +156,8 @@ phase_270_index            = find(logicalIndexes_phase_270);
 logicalIndexes_phase_315   = (phase_considered > 315-phase_margin_315) & (phase_considered < 315+phase_margin_315);
 phase_315_index            = find(logicalIndexes_phase_315);
 
-%% View camera data points corresponding to phases obtained in the previous section
 
+%% Plot camera data points corresponding to phases obtained in the previous section
 
 plot(1:no_of_image_pts, pf_near_skip(1:no_of_image_pts),'-')
 hold on;
@@ -199,7 +201,8 @@ for counter = 1:length(phase_315_index)
 end
 
 xlim([1 no_of_image_pts])
-%% Calculate mean of chemi images
+
+%% Calculate mean of chemi images (to calculate chemi data fluctuations)
 
 for counter = 1:500 % Mean being taken of 500 images
     counter
@@ -230,7 +233,7 @@ mean_chemi = mean(Chemi_double_reshaped_for_mean,2); % taking mean of each pixel
 std_chemi = std(Chemi_double_reshaped_for_mean,0,2); % taking standard deviation (over time)
 clear Chemi_double_reshaped_for_mean
 
-%% Claculate normalized fluctuations of chemi data. uses function phase_averaging.m
+%% Claculate normalized fluctuations of chemi data. Uses function phase_averaging.m
 
 [phase_avgd_chemi_000_reshaped, phase_avgd_pq__000_reshaped] ...
     = phase_averaging(phase_000_index, Image_data_folder, Chemiimgname,...
@@ -309,8 +312,7 @@ ylim([-plim plim])
 % ylim([-qlim qlim])
 
 
-
-%% Plot figures (can be modified as needed; arrange the figures in Matlab figure window, and generate code to get this section)
+%% Plot figures (SHOULD be modified as needed; arrange the figures in Matlab figure window, and generate code to get this section)
 % Some issues with colormaps: to be solved later
 
 cdata1 = phase_avgd_pq__000_reshaped;
